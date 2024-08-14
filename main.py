@@ -42,8 +42,7 @@ def save_output(data, filename='final_output.json'):
 async def main():
     start_time = time.time()
     
-    host_url = 'https://www.linkedin.com/pulse/topics/home/?trk=guest_homepage-basic_guest_nav_menu_articles'
-    #host_url = 'https://www.portofsandiego.org/'
+    host_url = 'https://www.portofsandiego.org/'
     desired_links = 25
 
     # Run the crawler and process the data
