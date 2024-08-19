@@ -1,4 +1,3 @@
-
 from typing import List, Dict, Any, Optional
 from urllib.parse import urljoin
 from crawlee.playwright_crawler import PlaywrightCrawler, PlaywrightCrawlingContext
@@ -12,30 +11,13 @@ import logging
 logger = logging.getLogger(__name__)
 
 class WebCrawler(BaseCrawler):
-    """A web crawler implementation using Playwright."""
-
     async def crawl(self, host_url: str, max_links: int, use_sitemap: bool = False, sitemap_urls: Optional[List[str]] = None) -> CrawlerResult:
-        """
-        Crawl a website and return the results.
-
-        Args:
-            host_url (str): The base URL to crawl.
-            max_links (int): The maximum number of links to crawl.
-            use_sitemap (bool, optional): Whether to use a sitemap for crawling. Defaults to False.
-            sitemap_urls (Optional[List[str]], optional): List of URLs from the sitemap. Defaults to None.
-
-        Returns:
-            CrawlerResult: The result of the crawling process.
-
-        Raises:
-            ValueError: If the host_url is invalid.
-        """
         if not self.is_valid_url(host_url):
             raise ValueError(f"Invalid host URL: {host_url}")
 
         processed_urls: set = set()
         crawled_data: List[CrawledItem] = []
-        initial_urls: List[str] = sitemap_urls if use_sitemap else []
+        initial_urls: List[str] = sitemap_urls or []
         is_first_page = not use_sitemap
 
         concurrency_settings = ConcurrencySettings(desired_concurrency=50)
@@ -78,7 +60,6 @@ class WebCrawler(BaseCrawler):
 
                 if not use_sitemap:
                     top_containers = await self.find_top_link_containers(context.page)
-
                     page_urls = await self.extract_valid_urls(top_containers, host_url, processed_urls)
 
                     if is_first_page:
@@ -100,7 +81,6 @@ class WebCrawler(BaseCrawler):
                 await crawler.run([host_url])
         except Exception as e:
             logger.error(f"Error during crawling: {str(e)}")
-            # Depending on your error handling strategy, you might want to re-raise this exception
         
         return CrawlerResult(
             content=crawled_data[:max_links],
@@ -110,17 +90,8 @@ class WebCrawler(BaseCrawler):
 
     @staticmethod
     async def find_top_link_containers(page: Page) -> List[Dict[str, Any]]:
-        """
-        Find the top 3 elements on the page that contain the most links.
-
-        Args:
-            page (Page): The Playwright page object.
-
-        Returns:
-            List[Dict[str, Any]]: A list of dictionaries containing information about the top link containers.
-        """
         await page.evaluate('window.scrollTo(0, document.body.scrollHeight)')
-        await page.wait_for_timeout(100)  # Wait for .1 seconds after scrolling
+        await page.wait_for_timeout(100)
 
         return await page.evaluate('''
             () => {
@@ -140,17 +111,6 @@ class WebCrawler(BaseCrawler):
         ''')
 
     async def extract_valid_urls(self, containers: List[Dict[str, Any]], host_url: str, processed_urls: set) -> List[str]:
-        """
-        Extract valid URLs from the given containers.
-
-        Args:
-            containers (List[Dict[str, Any]]): List of containers with link information.
-            host_url (str): The base URL of the website being crawled.
-            processed_urls (set): Set of URLs that have already been processed.
-
-        Returns:
-            List[str]: A list of valid URLs extracted from the containers.
-        """
         valid_urls = []
         for container in containers:
             for link in container['links']:

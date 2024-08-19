@@ -2,7 +2,7 @@ import asyncio
 import json
 import time
 from crawler import crawl_website
-from text_processor import process_crawled_data
+from text_processor import process_crawled_item
 from utils import fetch_sitemap
 from models import CrawlerResult
 
@@ -15,7 +15,7 @@ async def run_crawler_and_process(host_url: str, desired_links: int, use_sitemap
     print(f'Crawling completed. Total pages crawled: {len(result.content)}')
     print(f'Initial URLs found: {len(result.initial_urls)}')
 
-    result.content = process_crawled_data(result.content)
+    result.content = [process_crawled_item(item) for item in result.content]
     
     print(f'Total links collected: {len(result.links)}')
 
@@ -23,11 +23,7 @@ async def run_crawler_and_process(host_url: str, desired_links: int, use_sitemap
 
 def save_output(data: CrawlerResult, filename: str = 'final_output.json') -> None:
     with open(filename, 'w', encoding='utf-8') as f:
-        json.dump({
-            "content": [vars(item) for item in data.content],
-            "links": data.links,
-            "initial_urls": data.initial_urls
-        }, f, ensure_ascii=False, indent=2, default=str)
+        json.dump(data.model_dump(), f, ensure_ascii=False, indent=2, default=str)
     print(f'Results saved to {filename}')
 
 async def main() -> None:
@@ -35,7 +31,7 @@ async def main() -> None:
     
     host_url = 'https://nextjs.org/'
     desired_links = 25
-    use_sitemap = True  # Set this to True to use sitemap crawling
+    use_sitemap = False  # Set this to True to use sitemap crawling
 
     result = await run_crawler_and_process(host_url, desired_links, use_sitemap)
     

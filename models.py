@@ -1,23 +1,20 @@
-from dataclasses import dataclass, field
+from pydantic import BaseModel, Field
 from datetime import datetime
 from typing import List
 
-@dataclass
-class CrawledItem:
+class CrawledItem(BaseModel):
     url: str
     title: str
     text_content: str
-    date_crawled: datetime = field(default_factory=datetime.now)
+    date_crawled: datetime = Field(default_factory=datetime.now)
 
-@dataclass
-class ProcessedItem:
+class ProcessedItem(BaseModel):
     url: str
     title: str
     text_content: str
     date_crawled: datetime
 
-@dataclass
-class CrawlerResult:
+class CrawlerResult(BaseModel):
     content: List[CrawledItem]
     links: List[str]
     initial_urls: List[str]
