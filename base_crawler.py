@@ -11,4 +11,4 @@ class BaseCrawler(ABC):
     @staticmethod
     def is_valid_url(url: str) -> bool:
         parsed = urlparse(url)
-        return parsed.scheme in ('http', 'https') and not parsed.path.startswith('tel:')
+        return parsed.scheme in ('http', 'https') and bool(parsed.netloc) and not parsed.path.startswith('tel:')

@@ -1,5 +1,5 @@
 from typing import List, Dict, Any, Optional
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
 from crawlee.playwright_crawler import PlaywrightCrawler, PlaywrightCrawlingContext
 from crawlee.autoscaling import ConcurrencySettings
 from bs4 import BeautifulSoup
@@ -7,6 +7,7 @@ from playwright.async_api import Page
 from base_crawler import BaseCrawler
 from models import CrawledItem, CrawlerResult
 import logging
+from text_processor import process_crawled_item  # Add this import
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +18,7 @@ class WebCrawler(BaseCrawler):
 
         processed_urls: set = set()
         crawled_data: List[CrawledItem] = []
-        initial_urls: List[str] = sitemap_urls or []
+        unique_initial_urls: set = set(sitemap_urls or [])
         is_first_page = not use_sitemap
 
         concurrency_settings = ConcurrencySettings(desired_concurrency=50)
@@ -28,7 +29,7 @@ class WebCrawler(BaseCrawler):
 
         @crawler.router.default_handler
         async def request_handler(context: PlaywrightCrawlingContext) -> None:
-            nonlocal is_first_page, initial_urls
+            nonlocal is_first_page, unique_initial_urls
             if len(crawled_data) >= max_links:
                 return
 
@@ -63,7 +64,7 @@ class WebCrawler(BaseCrawler):
                     page_urls = await self.extract_valid_urls(top_containers, host_url, processed_urls)
 
                     if is_first_page:
-                        initial_urls = page_urls
+                        unique_initial_urls.update(page_urls)
                         is_first_page = False
 
                     for link in page_urls:
@@ -82,10 +83,13 @@ class WebCrawler(BaseCrawler):
         except Exception as e:
             logger.error(f"Error during crawling: {str(e)}")
         
+        # Process the crawled items
+        processed_data = [process_crawled_item(item) for item in crawled_data[:max_links]]
+        
         return CrawlerResult(
-            content=crawled_data[:max_links],
-            links=[item.url for item in crawled_data[:max_links]],
-            initial_urls=initial_urls
+            content=processed_data,
+            links=[item.url for item in processed_data],
+            unique_initial_urls=list(unique_initial_urls)
         )
 
     @staticmethod
@@ -112,9 +116,17 @@ class WebCrawler(BaseCrawler):
 
     async def extract_valid_urls(self, containers: List[Dict[str, Any]], host_url: str, processed_urls: set) -> List[str]:
         valid_urls = []
+        host_domain = urlparse(host_url).netloc.replace('www.', '')
+        
         for container in containers:
-            for link in container['links']:
-                full_url = urljoin(host_url, link)
-                if full_url.startswith(host_url) and full_url not in processed_urls and self.is_valid_url(full_url):
-                    valid_urls.append(full_url)
-        return valid_urls
+            if 'links' in container and isinstance(container['links'], list):
+                for link in container['links']:
+                    full_url = urljoin(host_url, link)
+                    parsed_url = urlparse(full_url)
+                    url_domain = parsed_url.netloc.replace('www.', '')
+                    
+                    if (url_domain == host_domain or url_domain.endswith('.' + host_domain)) and \
+                       full_url not in processed_urls and self.is_valid_url(full_url):
+                        valid_urls.append(full_url)
+        
+        return list(set(valid_urls))

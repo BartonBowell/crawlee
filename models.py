@@ -15,6 +15,6 @@ class ProcessedItem(BaseModel):
     date_crawled: datetime
 
 class CrawlerResult(BaseModel):
-    content: List[CrawledItem]
+    content: List[ProcessedItem]
     links: List[str]
-    initial_urls: List[str]
+    unique_initial_urls: List[str]

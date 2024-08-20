@@ -13,14 +13,17 @@ async def run_crawler_and_process(host_url: str, desired_links: int, use_sitemap
     result = await crawl_website(host_url, desired_links, use_sitemap=use_sitemap, sitemap_urls=sitemap_urls)
     
     print(f'Crawling completed. Total pages crawled: {len(result.content)}')
-    print(f'Initial URLs found: {len(result.initial_urls)}')
-
-    result.content = [process_crawled_item(item) for item in result.content]
+    
+    processed_content = [process_crawled_item(item) for item in result.content]
     
     print(f'Total links collected: {len(result.links)}')
+    print(f'Initial URLs found: {len(result.unique_initial_urls)}')
 
-    return result
-
+    return CrawlerResult(
+        content=processed_content,
+        links=result.links,
+        unique_initial_urls=result.unique_initial_urls
+    )
 def save_output(data: CrawlerResult, filename: str = 'final_output.json') -> None:
     with open(filename, 'w', encoding='utf-8') as f:
         json.dump(data.model_dump(), f, ensure_ascii=False, indent=2, default=str)
@@ -29,7 +32,7 @@ def save_output(data: CrawlerResult, filename: str = 'final_output.json') -> Non
 async def main() -> None:
     start_time = time.time()
     
-    host_url = 'https://nextjs.org/'
+    host_url = 'https://www.bellevuecollege.edu/'
     desired_links = 25
     use_sitemap = False  # Set this to True to use sitemap crawling
 
